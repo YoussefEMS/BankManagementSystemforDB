@@ -1,39 +1,58 @@
 # Portsaid International Bank (Python + Streamlit + SQL Server)
 
-Implements the walking skeleton (3-layer BCE style: UI → Controllers → DAOs/Entities → DB) with Streamlit as boundary, SQL Server persistence, and dataclass entities.
+Streamlit banking demo covering authentication, balances, history, transfers, loans, overdraft events, reporting, and employee operations. The code follows a 3-layer BCE-style layout: UI -> Controllers -> DAOs/Entities -> DB (see `WALKING_SKELETON.md`).
+
+## Prerequisites
+- Python 3.11+
+- SQL Server reachable from your machine and the `sqlcmd` CLI
+- ODBC driver for SQL Server (for example, `ODBC Driver 17 for SQL Server`)
 
 ## Setup
-- Python 3.11+ recommended.
-- Install deps: `pip install -r requirements.txt`
-- Create `.env` from `.env.example` and adjust credentials. If you use a named instance, set `DB_SERVER` to `localhost\\MSSQLSERVER01` (for your instance) and keep `DB_PORT=56539`; if you only have a host/port, use `localhost` with the port.
-- Ensure the SQL Server ODBC driver in `.env` is installed (e.g., `ODBC Driver 17 for SQL Server`).
+1) Install dependencies (virtualenv optional):  
+`pip install -r requirements.txt`
 
-## Database
-1) Create schema: run `scripts/create_tables.sql` (e.g., via `sqlcmd -S localhost,56539 -U <user> -P <pass> -i scripts/create_tables.sql` or `-S localhost\\MSSQLSERVER01,56539` if a named instance).
-2) Seed demo data: `sqlcmd -S localhost,56539 -U <user> -P <pass> -i scripts/seed_data.sql` (same note for named instance).
-   - Demo customers: `alice/1111`, `bob/2222`
-   - Demo employees: `teller1/3333`, `officer1/4444`
+2) Create `.env` in the repo root:
+```env
+DB_SERVER=localhost\\MSSQLSERVER01   # or localhost
+DB_PORT=56539                        # or your port
+DB_NAME=BankDB
+DB_USER=<username>
+DB_PASSWORD=<password>
+DB_DRIVER=ODBC Driver 17 for SQL Server
+POOL_MAX_SIZE=10
+POOL_MIN_IDLE=2
+POOL_IDLE_TIMEOUT_MS=300000
+POOL_MAX_LIFETIME_MS=1800000
+POOL_CONNECTION_TIMEOUT_MS=10000
+```
+If you use a named instance, keep the double backslash in `DB_SERVER` and append the port as shown above.
+
+## Database bootstrap
+1) Create schema:  
+`sqlcmd -S localhost,56539 -U <user> -P <pass> -i scripts/create_tables.sql`
+
+2) Seed demo data:  
+`sqlcmd -S localhost,56539 -U <user> -P <pass> -i scripts/seed_data.sql`
+
+- Demo customers: `cust1/0001`, `cust2/0002`, ... up to `cust100/0100`  
+- Demo employees: `teller1/3333`, `teller2/3334`, `officer1/4444`, `ops1/5555`  
+- Seed script loads 100 customers, 300 accounts, 30 loans, transactions, transfers, and overdraft events for testing.
 
 ## Run the app
 ```
 streamlit run app.py
 ```
 
-## Use-case map
-- Auth/Context: `AuthController`, `SessionContext`
-- Accounts/balances: `AccountController`
-- History: `TransactionController.history`
-- Deposits/withdrawals: `TransactionController.deposit/withdraw`
-- Transfers: `TransferController.transfer`
-- Loans: `LoanController.request_loan/list_loans`
-- Overdraft events: `OverDraftController`
-- Reports: `ReportController.account_summary` (aggregate + joins)
-- Employee ops: `EmployeeController` (create customer, loan review/update, account status, delete ops)
+## Repository map
+- `app.py`: Streamlit UI entry point and navigation.
+- `controllers/`: Use-case orchestration; validation and presentation shaping.
+- `daos/`: Parameterized SQL for accounts, transactions, transfers, loans, overdrafts, reporting, and auth.
+- `entities/`: Dataclass models aligned to table schemas.
+- `infra/`: Shared infrastructure (DB engine/pool factory).
+- `scripts/`: SQL for schema creation, seeding, and reporting samples.
+- `docs/`: SQL references and explanations (`docs/all_queries.md`, `docs/queries.md`).
+- `assets/`: UI assets (logo).
 
-## Assignment mapping (SQL + GUI)
-- Queries with explanations: `docs/queries.md` (covers aggregates, subqueries, joins >2 tables, inserts/updates/deletes); runnable samples in `scripts/report_queries.sql`.
-- Inserts: customer creation; transactions (deposit/withdraw); transfers; loan requests; overdraft events logging.
-- Updates: account status; loan status; balances during cash ops/transfer.
-- Deletes: employee "Delete Ops" page (pending loan delete; overdraft event cleanup).
-- Selects: account lists/balances, transaction history with filters, loans, overdraft events, report summary.
-- Report: employee "Reports" page shows account inflow/outflow and overdraft count (aggregate + joins).
+## Handy references
+- SQL walkthroughs plus business framing for each query: `docs/all_queries.md` (runnable samples in `scripts/report_queries.sql`).  
+- Architecture/walking-skeleton blueprint: `WALKING_SKELETON.md`.
